@@ -1,0 +1,114 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'jetty'
+sourceCompatibility = 1.8
+group = 'com.broship'
+version = '0.2.5'
+repositories {
+	mavenCentral()
+}
+
+configurations {
+	serverStartJars
+	serverLibJars
+	serverLibAnnotationJars
+}
+
+dependencies {
+	compile 'com.basho.riak:riak-client:2.0.4'
+	compile 'org.eclipse.jetty:jetty-server:9.2.6.v20141205'
+	compile 'org.eclipse.jetty:jetty-webapp:9.2.6.v20141205'
+	compile	'org.jboss.resteasy:resteasy-jaxrs:3.0.16.Final'
+	compile	'org.jboss.resteasy:resteasy-jackson2-provider:3.0.16.Final'
+	compile	'org.jboss.resteasy:resteasy-servlet-initializer:3.0.16.Final'
+	compile 'log4j:log4j:1.2.14'
+	compile 'org.slf4j:slf4j-log4j12:1.7.21'
+	testCompile group: 'junit', name: 'junit', version: '4.8.1'
+	
+	serverStartJars 'org.eclipse.jetty:jetty-start:9.3.8.v20160314@jar'
+	serverLibJars 'org.eclipse.jetty:jetty-annotations:9.3.8.v20160314@jar'
+	serverLibJars 'org.eclipse.jetty:jetty-deploy:9.3.8.v20160314@jar'
+	serverLibJars 'org.eclipse.jetty:jetty-http:9.3.8.v20160314@jar'
+	serverLibJars 'org.eclipse.jetty:jetty-io:9.3.8.v20160314@jar'
+	serverLibJars 'org.eclipse.jetty:jetty-jndi:9.3.8.v20160314@jar'
+	serverLibJars 'org.eclipse.jetty:jetty-plus:9.3.8.v20160314@jar'
+	serverLibJars 'org.eclipse.jetty.toolchain:jetty-schemas:3.1@jar'
+	serverLibJars 'org.eclipse.jetty:jetty-security:9.3.8.v20160314@jar'
+	serverLibJars 'org.eclipse.jetty:jetty-server:9.3.8.v20160314@jar'
+	serverLibJars 'org.eclipse.jetty:jetty-servlet:9.3.8.v20160314@jar'
+	serverLibJars 'org.eclipse.jetty:jetty-servlets:9.3.8.v20160314@jar'
+	serverLibJars 'org.eclipse.jetty:jetty-util:9.3.8.v20160314@jar'
+	serverLibJars 'org.eclipse.jetty:jetty-webapp:9.3.8.v20160314@jar'
+	serverLibJars 'org.eclipse.jetty:jetty-xml:9.3.8.v20160314@jar'
+	serverLibJars 'javax.servlet:javax.servlet-api:3.1.0@jar'
+	serverLibAnnotationJars 'javax.annotation:javax.annotation-api:1.2@jar'
+	serverLibAnnotationJars 'org.ow2.asm:asm:5.0.1@jar'
+	serverLibAnnotationJars 'org.ow2.asm:asm-commons:5.0.1@jar'
+}
+
+task resolveJetty()<<{
+	tasks.copyServer.execute()
+	tasks.copyBin.execute()
+	tasks.copyConf.execute()
+	tasks.resolveStartJetty.execute()
+	tasks.resolveLibJetty.execute()
+	tasks.resolveLibAnnotationJetty.execute()
+}
+
+task resolveStartJetty(type: Copy){
+    into "${project.buildDir}/distribution/server"
+    from configurations.serverStartJars
+    rename { String fileName ->
+		fileName.replace('jetty-start-9.3.8.v20160314.jar', 'start.jar')
+	}
+}
+
+task copyServer(type: Copy){
+    into "${project.buildDir}/distribution/server"
+    from "server"
+}
+
+task copyConf(type: Copy){
+    into "${project.buildDir}/distribution/conf"
+    from "conf"
+}
+
+task copyBin(type: Copy){
+    into "${project.buildDir}/distribution/bin"
+    from "script"
+}
+
+task resolveLibJetty(type: Copy){
+    into "${project.buildDir}/distribution/server/lib"
+    from configurations.serverLibJars
+    rename { String fileName ->
+    	fileName.replace('javax.servlet-api-3.1.0', 'servlet-api-3.1')
+    }
+	file("${project.buildDir}/distribution/server/lib/ext").mkdirs()
+}
+
+task resolveLibAnnotationJetty(type: Copy){
+    into "${project.buildDir}/distribution/server/lib/annotations"
+    from configurations.serverLibAnnotationJars
+}
+
+task jarAll(type: Jar) {
+	manifest {
+        attributes 'Implementation-Title': 'Broship Auth',
+        	'Implementation-Version': version,
+		'Main-Class': 'com.broship.user.service.Main'
+    }
+    baseName = project.name
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+    destinationDir = file("${project.buildDir}/distribution/dist")
+}
+
+war {
+    destinationDir = file("${project.buildDir}/distribution/dist")
+}
+
+build {
+	dependsOn resolveJetty
+}
+
