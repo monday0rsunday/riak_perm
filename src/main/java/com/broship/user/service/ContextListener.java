@@ -57,6 +57,8 @@ public class ContextListener implements ServletContextListener {
 			try{
 				client.shutdown().get();
 			}catch(Exception e){e.printStackTrace();}
+		io.netty.util.concurrent.FastThreadLocal.removeAll();
+		io.netty.util.concurrent.FastThreadLocal.destroy();
 		// logger.info("destroy listener");
 		// LogManager.shutdown();
 	}
